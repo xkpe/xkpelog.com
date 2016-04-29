@@ -3,13 +3,14 @@
 #include <future>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <random>
 #include <vector>
 
 using namespace std;
 
-constexpr auto NUMBERS_SIZE = size_t(1e6);
+constexpr auto NUMBERS_SIZE = size_t(1e1);
 constexpr auto MAX_PART = 1u << 20;
 
 template <typename Iterator> void merge_sort(Iterator start, Iterator end) {
@@ -60,8 +61,8 @@ template <typename Iterator> void quick_sort(Iterator start, Iterator end) {
     iter_swap(head++, tail--);
   }
 
-  quick_sort<Iterator>(start, middle);
-  quick_sort<Iterator>(middle, end);
+  quick_sort<Iterator>(start, head);
+  quick_sort<Iterator>(head, end);
 }
 
 template <typename Iterator>
@@ -101,15 +102,20 @@ int main() {
   auto numbers = vector<int>(NUMBERS_SIZE);
 
   {
-    uniform_int_distribution<> distribution(numeric_limits<int>::min(),
-                                            numeric_limits<int>::max());
+   // uniform_int_distribution<> distribution(numeric_limits<int>::min(),
+     //                                       numeric_limits<int>::max());
+    uniform_int_distribution<> distribution(0, 10);
     auto generator = mt19937(0);
     for (auto &&n : numbers) {
       n = distribution(generator);
     }
   }
+  auto reference = numbers;
+  sort(reference.begin(), reference.end());
+  copy(reference.begin(), reference.end(), std::ostream_iterator<int>(std::cout, " "));
+  cout <<endl;
 
-  auto test = [&numbers](const string &name, auto sort_function) {
+  auto test = [&numbers, &reference](const string &name, auto sort_function) {
     auto copy = numbers;
     auto start = chrono::high_resolution_clock::now();
 
@@ -118,6 +124,11 @@ int main() {
     auto end = chrono::high_resolution_clock::now();
     auto seconds = chrono::duration<double>(end - start).count();
     cout << setw(20) << name << " " << seconds << "s" << endl;
+    if (copy != reference) {
+      cout << "sorting failed" << endl;
+      std::copy(copy.begin(), copy.end(), std::ostream_iterator<int>(std::cout, " "));
+      cout <<endl;
+    }
   };
   test("std::sort", sort<decltype(numbers.begin())>);
   test("merge_sort", merge_sort<decltype(numbers.begin())>);
