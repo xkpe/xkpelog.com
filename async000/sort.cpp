@@ -10,11 +10,18 @@
 
 using namespace std;
 
-constexpr auto NUMBERS_SIZE = size_t(1e1);
-constexpr auto MAX_PART = 1u << 20;
+constexpr auto NUMBERS_SIZE = size_t(1e7);
+constexpr auto MAX_PART = 1u << 14;
 
-template <typename Iterator>
-void merge_sort(Iterator start, Iterator end) {
+template <typename Iterator> void print(Iterator start, Iterator end) {
+  while (start < end) {
+    cout << *start << ' ';
+    ++start;
+  }
+  cout << endl;
+}
+
+template <typename Iterator> void merge_sort(Iterator start, Iterator end) {
   auto size = distance(start, end);
   if (size <= MAX_PART) {
     sort(start, end);
@@ -42,25 +49,35 @@ void async_merge_sort(Iterator start, Iterator end) {
   }
 }
 
-template <typename Iterator>
-void quick_sort(Iterator start, Iterator end) {
+template <typename Iterator> void quick_sort(Iterator start, Iterator end) {
   auto size = distance(start, end);
-  if (size < 2) {
+  if (size < 2)
     return;
-  }
-  auto middle = start + size / 2;
-  auto pivot = *middle;
+  auto pivot = start[size/2];
   auto head = start;
   auto tail = end - 1;
 
+  while ((head < end) && (*head == pivot))
+    ++head;
+  if (head == end) {
+    return;
+  }
+  if (*head < pivot) {
+    pivot = *head;
+    head = start;
+  }
   while (head < tail) {
-    while ((head < tail) && (*head < pivot)) ++head;
-    while ((head < tail) && (*tail > pivot)) --tail;
-    if (head >= tail) break;
+    while ((head < tail) && (*head <= pivot))
+      ++head;
+    while ((head < tail) && (*tail > pivot))
+      --tail;
+    if (head >= tail)
+      break;
     iter_swap(head++, tail--);
   }
+  if (*head <= pivot)
+    ++head;
 
-  if (*head < pivot) ++head;
   quick_sort<Iterator>(start, head);
   quick_sort<Iterator>(head, end);
 }
@@ -68,29 +85,40 @@ void quick_sort(Iterator start, Iterator end) {
 template <typename Iterator>
 void async_quick_sort(Iterator start, Iterator end) {
   auto size = distance(start, end);
-  if (size < 2) {
+  if (size < 2)
     return;
-  }
-  auto middle = start + size / 2;
-  auto pivot = *middle;
+  auto pivot = *start;
   auto head = start;
   auto tail = end - 1;
 
+  while ((head < end) && (*head == pivot))
+    ++head;
+  if (head == end) {
+    return;
+  }
+  if (*head < pivot) {
+    iter_swap(head, start);
+    head = start + 1;
+    pivot = *start;
+  }
   while (head < tail) {
-    while ((head < tail) && (*head < pivot)) ++head;
-    while ((head < tail) && (*tail > pivot)) --tail;
-    if (head >= tail) break;
+    while ((head < tail) && (*head <= pivot))
+      ++head;
+    while ((head < tail) && (*tail > pivot))
+      --tail;
+    if (head >= tail)
+      break;
     iter_swap(head++, tail--);
   }
+  if (*head <= pivot)
+    ++head;
 
   if (size <= MAX_PART) {
-    if (*head < pivot) ++head;
-    quick_sort<Iterator>(start, middle);
-    quick_sort<Iterator>(middle, end);
+    quick_sort<Iterator>(start, head);
+    quick_sort<Iterator>(head, end);
   } else {
-    auto task1 =
-        async(launch::async, async_quick_sort<Iterator>, start, middle);
-    auto task2 = async(launch::async, async_quick_sort<Iterator>, middle, end);
+    auto task1 = async(launch::async, async_quick_sort<Iterator>, start, head);
+    auto task2 = async(launch::async, async_quick_sort<Iterator>, head, end);
     task1.wait();
     task2.wait();
   }
@@ -100,9 +128,9 @@ int main() {
   auto numbers = vector<int>(NUMBERS_SIZE);
 
   {
-    // uniform_int_distribution<> distribution(numeric_limits<int>::min(),
-    //                                       numeric_limits<int>::max());
-    uniform_int_distribution<> distribution(0, 10);
+    uniform_int_distribution<> distribution(numeric_limits<int>::min(),
+                                            numeric_limits<int>::max());
+    //    uniform_int_distribution<> distribution(-10, 10);
     auto generator = mt19937(0);
     for (auto &&n : numbers) {
       n = distribution(generator);
@@ -110,9 +138,6 @@ int main() {
   }
   auto reference = numbers;
   sort(reference.begin(), reference.end());
-  copy(reference.begin(), reference.end(),
-       std::ostream_iterator<int>(std::cout, " "));
-  cout << endl;
 
   auto test = [&numbers, &reference](const string &name, auto sort_function) {
     auto copy = numbers;
@@ -124,8 +149,12 @@ int main() {
     auto seconds = chrono::duration<double>(end - start).count();
     cout << setw(20) << name << " " << seconds << "s" << endl;
     if (copy != reference) {
-      cout << "sorting failed" << endl;
+      cout << name << " sorting failed" << endl;
       std::copy(copy.begin(), copy.end(),
+                std::ostream_iterator<int>(std::cout, " "));
+      cout << endl;
+      cout << "reference" << endl;
+      std::copy(reference.begin(), reference.end(),
                 std::ostream_iterator<int>(std::cout, " "));
       cout << endl;
     }
