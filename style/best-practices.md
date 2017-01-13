@@ -88,11 +88,59 @@ Inheritance
 ### Use *final* on member functions
 ### Use *override* on member functions
 
+### Don't user *copydoc* on function overrides
+Function overrides are implementing a behaviour that is different from the on in the base class, it should be documented properly.
+
 Code Quality
 ------------
 
 ### Avoid basic types in function parameters
+
+Prefer named types, create aliases, preferably strong types that represent the quantities.
+
+Good:
+```cpp
+SetRectArea( Corner topLeft, SizeV2 size );
+//...
+SetRectArea( Corner{ 10, 20 }, SizeV2{ 10, 10 } );
+
+```
+
+Bad:
+```cpp
+SetRectArea( int left, int top, unsigned width, unsigned height );
+SetRectArea( int left, int top, int right, int bottom );
+SetRectArea( int left, int right, int top, int bottom );
+//...
+SetSize( 10, 20, 10, 10 ); // can't really tell what parameters are from this line
+```
+
+```cpp
+SetRectArea( Vector2 topleft, Vector2 size );
+SetRectArea( Vector2 topleft, Vector2 bottomRight );
+//..
+SetRectArea( Vector2{10, 20}, Vector2{10, 10} ); // still hard to know what it means
+```
+
 ### Use enums instead of booleans
+
+It's hard to tell what is the meaning of boolean parameters in functions with multiple parameters.
+
+Good:
+```cpp
+SetVisibilityOptions( DisableState disabled, HiddenState hidden );
+//...
+SetVisibilityOptions( DisableState::ENABLED, HiddenState::VISIBLE );
+```
+
+Bad:
+```cpp
+SetVisibilityOptions( bool disabled, bool hidden );
+SetVisibilityOptions( bool hidden, bool disabled );
+SetVisibilityOptions( bool enabled, bool visible );
+//...
+SetVisibilityOptions( false, false ); // What???
+```
 
 ### Express logic of constraints only once
 
@@ -147,8 +195,11 @@ constexpr T* NotNull( T* value )
 }
 ```
 
+### 
+
 Dependency Injection
 ====================
 
+#
 
 
