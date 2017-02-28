@@ -39,7 +39,7 @@ for( auto&& value : data )
 }
 ```
 
-Use *r-value* references for temporary objects that will be moved
+Use *r-value* references for temporary objects that will be moved:
 ```cpp
 auto&& okButton = buttonFactory.New();
 auto popup = popupFactory.New(std::move(okButton));
@@ -48,8 +48,31 @@ auto popup = popupFactory.New(std::move(okButton));
 
 ### Keep variables in the minimum required scope
 
-Classes declaration
--------------------
+Type Aliasing
+-------------
+
+### Use *using* not *typedef*
+
+For consistency, using should be used in all cases because *typedef* does not support aliasing of templated types.
+
+### Do not alias pointer types (including smart pointers)
+
+Memory scemantics should be explicit.
+
+Good:
+```cpp
+auto textureData = std::unique_ptr<TextureData>{};
+```
+
+Bad:
+```cpp
+using TextureDataPointer = std::unique_ptr<TextureData>;
+auto textureDataPointer = TextureDataPointer{}; // Smart or Raw pointer?
+```
+
+
+Class declarations
+------------------
 
 ### Every *class* __must__ declare at least one constructor
 
@@ -178,7 +201,7 @@ Transparent for the user:
 
 Result:
 ```bash
-$ ./positive 
+$ ./positive
 1.111110687255859375
 positive: positive.cpp:10: T NonNegativeNumber(T) [T = float]: Assertion `0 <= value' failed.
 Aborted (core dumped)
@@ -195,11 +218,128 @@ constexpr T* NotNull( T* value )
 }
 ```
 
-### 
+###
 
-Dependency Injection
-====================
 
-#
+Other Topics
+------------
 
+### Const Correctness
+
+Prefer *constexpr* and *const* methods and variables.
+
+Whenever possible your class methods and variables should be *const* and *constexpr*.
+
+```cpp
+class SomeClass {
+public:
+  constexpr SomeClass(int value) : mValue {value} {}
+  constexpr void SetValue(int value) { mValue = value; }
+  constexpr int& GetValue() const { renturn value; }
+private:
+  int mValue;
+};
+constexpr auto GetAnObject() {
+  SomeClass a{10};
+  // it's possible to call a non-const constexpr member function
+  a.SetValue(42);
+  return a;
+}
+{
+  constexpre auto a = GetAnObject();
+  static_assert(a.GetValue(), 42, "Values should match!");
+}
+```
+
+### Scope Correctness
+
+Always initialize variables in the smaller scope where they are used.
+
+Good:
+```cpp
+void SetSameParent(Actor actor, Actor sibling) {
+  if(Actor parent = sibling.GetParent() ) {
+    actor.SetParent(parent);
+  }
+}
+```
+Bad:
+```cpp
+void SetSameParent(Actor actor, Actor sibling) {
+  Actor parent = sibling.GetParent();
+  if(parent) {
+    actor.SetParent(parent);
+  }
+}
+```
+
+### Interfaces ETUC and HTUI
+
+[Make your interfaces easy to use correctly and hard to use incorrectly](http://programmer.97things.oreilly.com/wiki/index.php/Make_Interfaces_Easy_to_Use_Correctly_and_Hard_to_Use_Incorrectly)
+
+### Resource Aquisitions Is Initialization (RAII)
+
+Resource reservation should be tied with the life of an object.
+
+Good:
+```cpp
+{
+  if(writeToFile) {
+    std::ofstream file("example.txt");
+    DALI_ASSERT_ALWAYS(file.is_open());
+    // ... write to the file
+  }
+  // file gets automatically closed
+}
+```
+
+Bad:
+```cpp
+{
+  if(writeToFile) {
+    FILE* file = fopen("example.txt", "w");
+    DALI_ASSERT_ALWAYS(file);
+    // ... write to the file
+
+    fclose(file); // manually close the file
+  }
+}
+```
+
+### Dependency Injection
+
+Separate object creation from domain logic.
+
+DI helps writting testable code.
+
+Good:
+
+```cpp
+// calculate bounding box for the tree starting on this node
+{
+  auto boundingBox = GetNodeBoundingBox();
+  for(auto&& child : GetChildren()) {
+    boundingBox.Expand(child.GetTreeBoundingBox());
+  }
+}
+
+BoundingBox::Expand(const BoundingBox& bb); // no knowledge about nodes
+```
+
+Bad:
+
+```cpp
+// calculate bounding box for the tree starting on this node
+{
+  auto boundingBox = GetNodeBoundingBox();
+  for(auto&& child : GetChildren()) {
+    boundingBox.Expand(child);
+  }
+}
+
+BoundingBox::Expand(const Node& node) {
+  auto nodeBB = node.GetTreeBoundingBox(); // unnecessary dependency on Node
+  // calculate the BB
+}
+```
 
