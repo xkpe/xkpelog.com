@@ -57,7 +57,7 @@ For consistency, using should be used in all cases because *typedef* does not su
 
 ### Do not alias pointer types (including smart pointers)
 
-Memory scemantics should be explicit.
+Memory semantics should be explicit.
 
 Good:
 ```cpp
