@@ -108,10 +108,10 @@ Inheritance
 
 ### Classes should be *final* by default
 ### If a class is not *final* it __must__ have a virtual destructor
-### Use *final* on member functions
-### Use *override* on member functions
+### Use *final* on member functions by default
+### Use *override* on member functions that override parent
 
-### Don't user *copydoc* on function overrides
+### Don't use *copydoc* on function overrides
 Function overrides are implementing a behaviour that is different from the on in the base class, it should be documented properly.
 
 Code Quality
